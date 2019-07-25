@@ -12,12 +12,12 @@ from spacy.gold import GoldParse
     input_dir=("Input directory for model", "option", "o", Path)
 )
 def main(key_file='mturk-results-v6.csv', input_dir='./output_v6'):
-    nlp = spacy.load(input_dir).tail(300)
+    nlp = spacy.load(input_dir)
     Doc.set_extension("ents", default=[])
     scorer = Scorer()
 
     # read in key file
-    key = pandas.read_csv(key_file).reset_index(drop=True)
+    key = pandas.read_csv(key_file).tail(300).reset_index(drop=True)
 
     # turn Answer passages into docs, then retokenize to act as an 'Answer Key' set
     docs = list(nlp.pipe(key['Answer']))

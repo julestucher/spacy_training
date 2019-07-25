@@ -1,31 +1,30 @@
 import spacy
+import plac
+from pathlib import Path
 from ner_book_titles_v6 import trim_entity_spans, retokenize_docs
 import pandas
 from spacy.scorer import Scorer
 from spacy.tokens import Doc
 from spacy.gold import GoldParse
 
+@plac.annotations(
+    file_to_nlp=("List of passages for the NER", "option", "nm", str),
+    input_dir=("Input directory for model", "option", "o", Path),
+    output_str=("Filename for the output file", "option", "n", str),
+)
 
-def main():
-# test the trained model
-    nlp = spacy.load('./output_v6')
-    Doc.set_extension("ents", default=[])
+def main(file_to_nlp='mturk-blanks.csv', input_dir='./output_v5', output_str='test-blanks-v6.csv''):
+    # load the trained model
+    nlp = spacy.load(input_dir)
 
-    data1 = pandas.read_csv('mturk-blanks.csv').reset_index(drop=True)
+    # read the data set and pipe through nlp
+    data1 = pandas.read_csv(file_to_nlp).reset_index(drop=True)
     keys = list(nlp.pipe(data1['Answer']))
-    #keys = retokenize_docs(data1, keys)
-
-    print(keys)
-    scorer = Scorer()
 
     test_ans = {'Answer': [], 'TextTitle': [], 'Start': [], 'End': [], 'Titles': []}
     for i in range(len(keys)):
-        print(i)
-        print(keys[i])
         doc = keys[i]
-        #doc = nlp(doc)
-        #scorer.score(doc, GoldParse(doc=doc, entities=ents['entities']))
-        print("Entities in '%s'" % doc.text)
+        print("Books in '%s'" % doc.text)
         test_ans['Answer'].append(doc.text)
         test_ans['TextTitle'].append(data1['TextTitle'][i])
         test_ans['Start'].append([])
@@ -38,9 +37,9 @@ def main():
                 test_ans['End'][len(test_ans['Answer'])-1].append(ent.end_char)
                 test_ans['Titles'][len(test_ans['Answer'])-1].append(ent.text)
     test_ans = pandas.DataFrame(data=test_ans)
-    test_ans.to_csv('test-blanks-v6.csv')
+    test_ans.to_csv(output_str)
 
     print(scorer.ents_per_type)
 
 if __name__ == '__main__':
-    main()
+    plac.call(main)
