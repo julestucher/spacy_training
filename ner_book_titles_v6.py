@@ -17,8 +17,8 @@ LABEL = "BOOK"
 nlp = spacy.load('en_core_web_md')
 
 # read training data and test data
-data1 = pandas.read_csv('mturk-results-v6.csv').head(100) # rest of file to be used in evaluating
-test = pandas.read_csv('title-id-mturk-results-7-12.csv').head(100)
+data1 = pandas.read_csv('mturk-results-v6.csv').head(2300) # rest of file to be used in evaluating
+test = pandas.read_csv('title-id-mturk-results-7-12.csv')
 
 
 @plac.annotations(

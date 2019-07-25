@@ -13,7 +13,7 @@ from spacy.gold import GoldParse
     output_str=("Filename for the output file", "option", "n", str),
 )
 
-def main(file_to_nlp='mturk-blanks.csv', input_dir='./output_v5', output_str='test-blanks-v6.csv''):
+def main(file_to_nlp='mturk-results-v6.csv', input_dir='./output_v6', output_str='test-blanks-v6.csv'):
     # load the trained model
     nlp = spacy.load(input_dir)
 
@@ -38,8 +38,6 @@ def main(file_to_nlp='mturk-blanks.csv', input_dir='./output_v5', output_str='te
                 test_ans['Titles'][len(test_ans['Answer'])-1].append(ent.text)
     test_ans = pandas.DataFrame(data=test_ans)
     test_ans.to_csv(output_str)
-
-    print(scorer.ents_per_type)
 
 if __name__ == '__main__':
     plac.call(main)

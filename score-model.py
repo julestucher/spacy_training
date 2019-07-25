@@ -27,8 +27,6 @@ def main(key_file='mturk-results-v6.csv', input_dir='./output_v6'):
     for i in range(len(keys)):
         doc, ents = keys[i]
         doc = nlp(doc)
-        print(doc)
-        print(ents['entities'])
         scorer.score(doc, GoldParse(doc=doc, entities=ents['entities']))
 
     # print score -- pay attention to 'BOOK' type
