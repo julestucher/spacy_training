@@ -10,14 +10,18 @@ import pandas
 import json
 import re
 
-
 # Label for new entity
 LABEL = "BOOK"
 
 nlp = spacy.load('en_core_web_md')
 
-# read training data and test data
-data1 = pandas.read_csv('mturk-results-v6.csv').head(2300) # rest of file to be used in evaluating
+# read training data (should have 'Answer', 'Start', and 'End' that correspond
+# to passages, list of starts, list of ends
+# see: 'mturk-results-v6.csv'
+# use 85% of data for training, and the remainder for evaluation
+data1 = pandas.read_csv('mturk-results-v6.csv').head(2300)
+
+# test data should have (at least) 'Answer' column of passages to be processed
 test = pandas.read_csv('title-id-mturk-results-7-12.csv')
 
 
@@ -27,6 +31,13 @@ test = pandas.read_csv('title-id-mturk-results-7-12.csv')
     n_iter=("Number of training iterations", "option", "n", int),
 )
 def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
+    '''
+    Trains the spacy md model to recognize book Titles
+
+    Uses a dataset of mturk results that has a list of start/end indexes for
+    book title references
+    '''
+
     random.seed(0)
 
     ner = nlp.get_pipe('ner')
