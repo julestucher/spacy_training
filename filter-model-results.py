@@ -199,10 +199,10 @@ def test_candidate(cand, title):
 
 
 @plac.annotations(
-    input_file=("Input file for filtering", "option", "o", str)
+    input_file=("Input file for filtering", 'optional', type=str)
 )
-# Main method filters the results of the Book-trained NER (from test-book-model.py)
-def main(input_file='test-blanks-v6.csv'):
+# Main method filters the results of the Book-trained NER (from output test-book-model.py)
+def main(input_file='test-mturk-v6.csv'):
     data1 = pandas.read_csv(input_file)
     title_col = []
     for i in range(len(data1)):

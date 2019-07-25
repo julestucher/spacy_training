@@ -21,8 +21,7 @@ nlp = spacy.load('en_core_web_md')
 # use 85% of data for training, and the remainder for evaluation
 data1 = pandas.read_csv('mturk-results-v6.csv').head(2300)
 
-# test data should have (at least) 'Answer' column of passages to be processed
-test = pandas.read_csv('title-id-mturk-results-7-12.csv')
+
 
 
 @plac.annotations(
@@ -37,7 +36,6 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
     Uses a dataset of mturk results that has a list of start/end indexes for
     book title references
     '''
-
     random.seed(0)
 
     ner = nlp.get_pipe('ner')
@@ -71,26 +69,33 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
                 nlp.update(texts, annotations, sgd=optimizer, drop=0.35, losses=losses)
             print("Losses", losses)
 
-    # init dict -> DataFrame for holding test data
-    test_ans = {'Answer': [], 'TextTitle': [], 'Start': [], 'End': [], 'Titles': []}
+    # test data should have (at least) 'Answer' column of passages to be processed
+    try:
+        test = pandas.read_csv('title-id-mturk-results-7-12.csv')
+    except FileNotFoundError:
+        test = ''
 
-     # test the trained model
-    for test_text in test['Answer']:
-        doc = nlp(test_text)
-        print("Entities in '%s'" % test_text)
-        test_ans['Answer'].append(doc.text)
-        test_ans['TextTitle'].append('unknown')
-        test_ans['Start'].append([])
-        test_ans['End'].append([])
-        test_ans['Titles'].append([])
-        for ent in doc.ents:
-            print(ent.label_, ent.text)
-            if ent.label_ == 'BOOK':
-                test_ans['Start'][len(test_ans['Answer'])-1].append(ent.start_char)
-                test_ans['End'][len(test_ans['Answer'])-1].append(ent.end_char)
-                test_ans['Titles'][len(test_ans['Answer'])-1].append(ent.text)
-    test_ans = pandas.DataFrame(data=test_ans)
-    test_ans.to_csv('book-model-test.csv')
+    if test != '':
+        # init dict -> DataFrame for holding test data
+        test_ans = {'Answer': [], 'TextTitle': [], 'Start': [], 'End': [], 'Titles': []}
+
+         # test the trained model
+        for test_text in test['Answer']:
+            doc = nlp(test_text)
+            print("Entities in '%s'" % test_text)
+            test_ans['Answer'].append(doc.text)
+            test_ans['TextTitle'].append('unknown')
+            test_ans['Start'].append([])
+            test_ans['End'].append([])
+            test_ans['Titles'].append([])
+            for ent in doc.ents:
+                print(ent.label_, ent.text)
+                if ent.label_ == 'BOOK':
+                    test_ans['Start'][len(test_ans['Answer'])-1].append(ent.start_char)
+                    test_ans['End'][len(test_ans['Answer'])-1].append(ent.end_char)
+                    test_ans['Titles'][len(test_ans['Answer'])-1].append(ent.text)
+        test_ans = pandas.DataFrame(data=test_ans)
+        test_ans.to_csv('book-model-test.csv')
 
 
     # save model to output directory
