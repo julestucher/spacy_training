@@ -11,12 +11,14 @@ import json
 import re
 
 
+# Label for new entity
 LABEL = "BOOK"
 
 nlp = spacy.load('en_core_web_md')
-data1 = pandas.read_csv('mturk-results-v6.csv').head(2300)
-#data = data1 #.head(8000)
-test = pandas.read_csv('title-id-mturk-results-7-12.csv')
+
+# read training data and test data
+data1 = pandas.read_csv('mturk-results-v6.csv').head(100) # rest of file to be used in evaluating
+test = pandas.read_csv('title-id-mturk-results-7-12.csv').head(100)
 
 
 @plac.annotations(
@@ -30,18 +32,19 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
     ner = nlp.get_pipe('ner')
     ner.add_label(LABEL)
 
-    #define ents extentsion for Docs
+    # define ents extentsion for Docs
     Doc.set_extension("ents", default=[])
 
+    # NLP training data and format it
     docs = list(nlp.pipe(data1['Answer']))
     TRAIN_DATA = retokenize_docs(data1, docs)
 
+    # trim data of extra ws
     TRAIN_DATA = trim_entity_spans(TRAIN_DATA)
-
-    print(TRAIN_DATA)
 
     optimizer = nlp.resume_training()
     move_names = list(ner.move_names)
+
     # get names of other pipes to disable them during training
     other_pipes = [pipe for pipe in nlp.pipe_names if pipe != "ner"]
 
@@ -49,7 +52,6 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
         sizes = compounding(1.0, 16.0, 1.001)
         # batch up the examples using spaCy's minibatch
         for itn in range(n_iter):
-            print(itn)
             random.shuffle(TRAIN_DATA)
             batches = minibatch(TRAIN_DATA, size=sizes)
             losses = {}
@@ -58,7 +60,9 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
                 nlp.update(texts, annotations, sgd=optimizer, drop=0.35, losses=losses)
             print("Losses", losses)
 
+    # init dict -> DataFrame for holding test data
     test_ans = {'Answer': [], 'TextTitle': [], 'Start': [], 'End': [], 'Titles': []}
+
      # test the trained model
     for test_text in test['Answer']:
         doc = nlp(test_text)
@@ -75,7 +79,7 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
                 test_ans['End'][len(test_ans['Answer'])-1].append(ent.end_char)
                 test_ans['Titles'][len(test_ans['Answer'])-1].append(ent.text)
     test_ans = pandas.DataFrame(data=test_ans)
-    test_ans.to_csv('test.csv')
+    test_ans.to_csv('book-model-test.csv')
 
 
     # save model to output directory
@@ -96,18 +100,26 @@ def main(new_model_name='book', output_dir='./output_v5', n_iter=100):
         for ent in doc2.ents:
             print(ent.label_, ent.text)
 
+# with a data set and list of docs, convert to spacy entity training data format
 def retokenize_docs(data, docs):
     TRAIN_DATA = []
     for i in range(len(docs)):
         doc = docs[i]
+        for ent in doc.ents:
+            temp = (ent.start_char, ent.end_char, ent.label_)
+            doc._.ents.append(temp)
         start = data['Start'][i][1:len(data['Start'][i])-1]
         starts = start.split(',')
         end = data['End'][i][1:len(data['End'][i])-1]
         ends = end.split(',')
         if starts != ['']:
             titles = []
+
+            # list of title candidates
             for s in range(len(starts)):
                 titles.append(data['Answer'][i][int(starts[s]):int(ends[s])])
+
+            # edit/trim titles to match possible token.text
             for t in range(len(titles)):
                 if len(titles[t]) > 0:
                     starts[t] = int(starts[t])
@@ -119,6 +131,7 @@ def retokenize_docs(data, docs):
                     while titles[t][len(titles[t])-1:] in ('"', "'", ' '):
                         titles[t] = titles[t][:len(titles[t])-1]
                         ends[t] = ends[t] - 1
+            # 'retokenize' and add book entities
             k = 0
             while k < len(doc):
                 token = doc[k]
@@ -135,9 +148,10 @@ def retokenize_docs(data, docs):
                         temp = (int(token.idx), int(token.idx) + len(token.text), token.ent_type_)
                         doc._.ents.append(temp)
                     k += 1
-            ent_dict = {'entities': doc._.ents}
-            inst = (doc.text, ent_dict)
-            TRAIN_DATA.append(inst)
+        # use doc._.ents to put ('Answer', 'entites': dict) tuples in list
+        ent_dict = {'entities': doc._.ents}
+        inst = (doc.text, ent_dict)
+        TRAIN_DATA.append(inst)
     return TRAIN_DATA
 
 

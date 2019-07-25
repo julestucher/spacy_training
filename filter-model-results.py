@@ -1,9 +1,10 @@
 import pandas
 import spacy
-from filter_dev_data import make_titles, test_candidate
+import plac
+from pathlib import Path
 
+nlp = spacy.load('./output_v6')
 
-nlp = spacy.load('./output_v5')
 
 STOP_WORDS = set("""
 a
@@ -181,19 +182,47 @@ yourself
 yourselves
 """.split())
 
-data1 = pandas.read_csv('test-blanks-v6.csv')
+# Takes a book title and a candidate title, returns true if it's a viable title
+# false if otherwise
+def test_candidate(cand, title):
+    cand_doc = nlp(cand)
+    title_doc = nlp(title)
+    tokens = []
+    for token in title_doc:
+        tokens.append(token.lower_)
+        tokens.append(token.text)
+        tokens.append(token.lemma_)
+    for token in cand_doc:
+        if token.lower_ not in tokens and token.lower_ not in STOP_WORDS:
+            return False
+    return True
 
-def main():
+
+@plac.annotations(
+    input_file=("Input file for filtering", "option", "o", str)
+)
+# Main method filters the results of the Book-trained NER (from test-book-model.py)
+def main(input_file='test-blanks-v6.csv'):
+    data1 = pandas.read_csv(input_file)
     title_col = []
     for i in range(len(data1)):
         new_titles = []
-        titles = make_titles(data1, i)
+        titles = []
+        start = data1['Start'][i][1:len(data1['Start'][i])-1]
+        starts = start.split(',')
+        end = data1['End'][i][1:len(data1['End'][i])-1]
+        ends = end.split(',')
+        if starts != ['']:
+
+            # list of title candidates
+            for s in range(len(starts)):
+                titles.append(data1['Answer'][i][int(starts[s]):int(ends[s])])
         for title in titles:
             if test_candidate(title, data1['TextTitle'][i]):
                 new_titles.append(title)
         title_col.append(new_titles)
     data1['Titles'] = title_col
-    data1.to_csv('test-blanks-filtered-v6.csv')
+    data1.to_csv(input_file+'-filtered.csv')
 
 if __name__ == '__main__':
-    main()
+    plac.call(main)

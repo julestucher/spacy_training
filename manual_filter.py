@@ -2,6 +2,8 @@ import pandas as pd
 import sys
 import io
 
+## For manual approval of training data
+
 data = pd.read_csv('mturk-results-no-dups.csv')
 new_data = {'Answer': [], 'TextTitle': [], 'Start': [], 'End': [], 'Titles': []}
 
